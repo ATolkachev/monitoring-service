@@ -1,14 +1,10 @@
 import asyncio
-import telnetlib
 from time import time
 from pymongo import MongoClient
 
 class CheckerService():
 
     _monitors = []
-
-    def tic(self):
-        return '%1.3f seconds' % (time() - self._start_time)
 
     def __init__(self):
         self.client = MongoClient('127.0.0.1', 27017)
@@ -64,7 +60,7 @@ class CheckerService():
                 status = False
                 response = 'Failed'
             finally:
-                print("Monitor {}: Test {}:{} - {} in {}".format(item['id'],item['address'],item['port'],response,self.tic()))
+                print("Monitor {}: Test {}:{} - {}".format(item['id'],item['address'],item['port'],response))
                 self.update_monitor(monitor=item, status=status)
                 connector.close()
             await asyncio.sleep(5)
