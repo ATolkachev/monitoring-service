@@ -74,3 +74,7 @@ class CheckerService():
 if __name__ == '__main__':
     check = CheckerService()
     check.start_monitors()
+
+def RunChecker():
+    check = CheckerService()
+    check.start_monitors()

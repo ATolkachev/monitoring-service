@@ -7,8 +7,8 @@ setup(
     zip_safe=True,
     entry_points = {
         'console_scripts': [
-        	'monitor-rest=monitor.rest:main',        # сервис с REST интерфейсом
-        	'monitor-checker=monitor.checker:main'   # сервис который осуществляет проверки
+        	'monitor-rest=monitor.rest:RunRest',        # сервис с REST интерфейсом
+        	'monitor-checker=monitor.checker:RunChecker'   # сервис который осуществляет проверки
         ],
     }
 )
