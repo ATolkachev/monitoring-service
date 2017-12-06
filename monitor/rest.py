@@ -9,7 +9,7 @@ class RestService():
 
     def __init__(self):
         self.client = MongoClient()
-        self.client = MongoClient('159.89.18.241', 27017)
+        self.client = MongoClient('127.0.0.1', 27017)
         self.db = self.client['monitoring']
         self.alert_collection = self.db['alerts']
         self.monitor_collection = self.db['monitor']
