@@ -1,14 +1,18 @@
 import asyncio
 from time import time
 from pymongo import MongoClient
+import config
 
 class CheckerService():
 
     _monitors = []
 
     def __init__(self):
-        self.client = MongoClient('127.0.0.1', 27017)
-        self.db = self.client['monitoring']
+        ini = config.ConfigReader()
+        self._rest_config = ini.load_config(config = "../config.ini")
+
+        self.client = MongoClient(self._rest_config['server'])
+        self.db = self.client[self._rest_config['database']]
         self.alert_collection = self.db['alerts']
         self.monitor_collection = self.db['monitor']
 

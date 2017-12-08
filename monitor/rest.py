@@ -2,15 +2,18 @@ import json
 from time import time
 from aiohttp import web
 from pymongo import MongoClient
+import config
 
 class RestService():
 
     _max_monitor_id = 0
 
     def __init__(self):
-        self.client = MongoClient()
-        self.client = MongoClient('127.0.0.1', 27017)
-        self.db = self.client['monitoring']
+        ini = config.ConfigReader()
+        self._rest_config = ini.load_config(config = "../config.ini")
+
+        self.client = MongoClient(self._rest_config['server'])
+        self.db = self.client[self._rest_config['database']]
         self.alert_collection = self.db['alerts']
         self.monitor_collection = self.db['monitor']
 
@@ -60,10 +63,6 @@ class RestService():
         return result
 
     def print_check(self,id):
-        # result = ''
-        # if id == -1:
-        #     result = "All checks"
-        # else:
         result = self.get_check_status(id)
 
         return result
@@ -154,7 +153,7 @@ class RestService():
         app.router.add_delete('/endpoints/{id}', self.handle_delete)
 
 
-        web.run_app(app, host='127.0.0.1', port=8080)
+        web.run_app(app, host=self._rest_config['address'], port=self._rest_config['port'])
 
 if __name__ == '__main__':
     rest = RestService()

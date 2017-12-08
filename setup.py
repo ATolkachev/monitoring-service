@@ -1,7 +1,9 @@
 from setuptools import setup, find_packages
+import monitor
+
 setup(
     name="monitor",
-    version="0.1.5",
+    version=monitor.__version__,
     packages=find_packages(),
     scripts=['monitor/rest.py','monitor/checker.py'],
     zip_safe=True,
