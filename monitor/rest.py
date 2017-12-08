@@ -60,7 +60,7 @@ class RestService():
         else:
             result = self.prepare_monitor(self.get_monitor(id))
 
-        return result
+        return json.dumps(result, ensure_ascii=False)
 
     def print_check(self,id):
         result = self.get_check_status(id)
@@ -95,36 +95,76 @@ class RestService():
 
         return result
 
+    def update_monitor(self, monitor, update):
+        self.monitor_collection.find_one_and_update({'id': monitor},
+                                                        {'$set': update})
+
+        return monitor
+
+    def check_update_monitor(self, update):
+        result = dict()
+
+        if "address" in update:
+            result["address"] = update["address"]
+
+        if "name" in update:
+            result["name"] = update["name"]
+
+        if "port" in update:
+            if isinstance(update.get("port"), int) and update["port"] > 0 and update["port"] < 65536:
+                result["port"] = update["port"]
+            else:
+                raise Exception("Error: Wrong port")
+
+        if len(result)==0:
+            raise Exception("Nothing to update")
+
+        return result
+
     async def handle(self,request):
-        name = request.match_info.get('name', "Anonymous")
-        text = "Hello, " + name
+        text = "Hello, this is Monitoring service."
         return web.Response(text=text)
 
     async def handle_get(self,request):
         id = int(request.match_info.get('id', -1))
         text=str(self.print_check(id))
-        return web.Response(text=text)
+        return web.json_response(text=text)
 
     async def handle_post(self,request):
         data = await request.json()
-        id = -1
+        #id = int(request.match_info.get('id', -1))
+
         try:
             id = self.insert_monitor(self.check_insert_monitor(data))
         except:
             return web.Response(status=500, text="Something going wrong.")
         print("New monitor Added with ID={}".format(id))
+
         text = str({"id": id})
-        return web.Response(text=text)
+
+        return web.json_response(text=text)
 
     async def handle_put(self,request):
-        name = request.match_info.get('id', "Anonymous")
-        text = "Hello, " + name
-        return web.Response(text=text)
+        id = int(request.match_info.get('id', -1))
+
+        if (id <= 0):
+            return web.Response(status=500, text="Wrong ID provided.")
+
+        data = await request.json()
+        try:
+            id = self.update_monitor(id, self.check_update_monitor(data))
+        except:
+            return web.Response(status=500, text="Something going wrong.")
+
+        print("Monitor with ID {} Updated".format(id))
+
+        text = json.dumps({"id": id})
+
+        return web.json_response(text=text)
 
     async def handle_delete(self,request):
-        name = request.match_info.get('id', "Anonymous")
-        text = "Hello, " + name
-        return web.Response(text=text)
+        text = '{"error": 401}'
+        return web.json_response(text=text)
 
     def prepare_monitor(self, base_monitor):
         result = dict()
