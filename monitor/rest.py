@@ -3,6 +3,7 @@ from time import time
 from aiohttp import web
 from pymongo import MongoClient
 import config
+import pika
 
 class RestService():
 
@@ -147,6 +148,8 @@ class RestService():
 
         text = str({"id": id})
 
+        self.send_update_monitor()
+
         return web.json_response(text=text)
 
     async def handle_put(self,request):
@@ -165,6 +168,8 @@ class RestService():
 
         text = json.dumps({"id": id})
 
+        self.send_update_monitor()
+
         return web.json_response(text=text)
 
     async def handle_delete(self,request):
@@ -176,6 +181,8 @@ class RestService():
                 text = '{"Deleted": false}'
         else:
             return web.Response(status=500, text="Wrong ID.")
+
+        self.send_update_monitor()
 
         return web.json_response(text=text)
 
@@ -190,6 +197,14 @@ class RestService():
         result["since"] = int(base_monitor["since"])
 
         return result
+
+    def send_update_monitor(self):
+        connection = pika.BlockingConnection(pika.ConnectionParameters(host='159.89.18.241',credentials=pika.PlainCredentials('guest', 'guest'),virtual_host="/"))
+        channel = connection.channel()
+        channel.queue_declare(queue='monitor')
+        channel.basic_publish(exchange='', routing_key='monitor', body='{"reload": true}')
+        connection.close()
+
     def main(self):
 
         #s = self.get_monitor(1)
