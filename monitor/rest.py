@@ -121,6 +121,11 @@ class RestService():
 
         return result
 
+    def delete_monitor(self, id):
+        result = self.monitor_collection.delete_many({"id": id})
+
+        return result.deleted_count
+
     async def handle(self,request):
         text = "Hello, this is Monitoring service."
         return web.Response(text=text)
@@ -163,7 +168,15 @@ class RestService():
         return web.json_response(text=text)
 
     async def handle_delete(self,request):
-        text = '{"error": 401}'
+        text = '{"Deleted": true}'
+        id = int(request.match_info.get('id', -1))
+
+        if(id>0):
+            if self.delete_monitor(id)==0:
+                text = '{"Deleted": false}'
+        else:
+            return web.Response(status=500, text="Wrong ID.")
+
         return web.json_response(text=text)
 
     def prepare_monitor(self, base_monitor):
