@@ -3,7 +3,7 @@ import json
 import os
 from time import time
 from pymongo import MongoClient
-from multiprocessing import Process,Pool
+from multiprocessing import Process
 import config
 import pika
 
@@ -27,7 +27,7 @@ class CheckerService():
             print("{} monitors loaded.".format(monitor_count))
 
         self.connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host='159.89.18.241', credentials=pika.PlainCredentials('guest', 'guest'),
+            pika.ConnectionParameters(host='127.0.0.1', credentials=pika.PlainCredentials('guest', 'guest'),
                                       virtual_host="/"))
 
     def load_monitors(self,collection):
@@ -94,6 +94,10 @@ class CheckerService():
             await asyncio.sleep(2)
 
     def listen_alerts(self):
+        self.connection = pika.BlockingConnection(
+            pika.ConnectionParameters(host='127.0.0.1', credentials=pika.PlainCredentials('guest', 'guest'),
+                                      virtual_host="/"))
+
         channel = self.connection.channel()
         channel.queue_declare(queue='alerts', durable=True)
 
@@ -173,8 +177,7 @@ def RunChecker():
     #check.start_monitors()
 
     for i in range(4):
-        p = Process(target=check.listen_alerts())
-        print(i)
+        p = Process(target=check.listen_alerts, args=())
         p.start()
 
     publish_loop = asyncio.new_event_loop()

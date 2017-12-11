@@ -199,7 +199,7 @@ class RestService():
         return result
 
     def send_update_monitor(self):
-        connection = pika.BlockingConnection(pika.ConnectionParameters(host='159.89.18.241',credentials=pika.PlainCredentials('guest', 'guest'),virtual_host="/"))
+        connection = pika.BlockingConnection(pika.ConnectionParameters(host='127.0.0.1',credentials=pika.PlainCredentials('guest', 'guest'),virtual_host="/"))
         channel = connection.channel()
         channel.queue_declare(queue='monitor')
         channel.basic_publish(exchange='', routing_key='monitor', body='{"reload": true}')
