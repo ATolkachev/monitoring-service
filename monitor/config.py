@@ -12,6 +12,8 @@ class ConfigReader:
         Result['address'] = '127.0.0.1'
         Result['port'] = 8080
         Result['forks'] = 4
+        Result['workers'] = 4
+        Result['amqp'] = '127.0.0.1'
 
         return Result
 
@@ -26,6 +28,9 @@ class ConfigReader:
             Result['address'] = self._config.get('server', 'address', fallback='127.0.0.1')
             Result['port'] = self._config.get('server', 'port', fallback=8080)
             Result['forks'] = self._config.get('checker', 'forks', fallback=4)
+            Result['workers'] = self._config.get('checker', 'worker', fallback=4)
+            Result['amqp'] = self._config.get('amqp', 'address', fallback='127.0.0.1')
+
 
         return Result
 

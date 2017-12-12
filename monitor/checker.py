@@ -1,6 +1,5 @@
 import asyncio
 import json
-import os
 from time import time
 from pymongo import MongoClient
 from multiprocessing import Process
@@ -27,7 +26,7 @@ class CheckerService():
             print("{} monitors loaded.".format(monitor_count))
 
         self.connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host='127.0.0.1', credentials=pika.PlainCredentials('guest', 'guest'),
+            pika.ConnectionParameters(host=self._rest_config['amqp'], credentials=pika.PlainCredentials('guest', 'guest'),
                                       virtual_host="/"))
 
     def load_monitors(self,collection):
@@ -54,72 +53,86 @@ class CheckerService():
             print("There is no loaded monitors.")
 
     async def start_listen(self):
-        #tasks = [self.listen_monitor()]
-        await asyncio.gather(self.listen_monitor())
+
+        async def listen_monitor():
+            channel = self.connection.channel()
+            channel.queue_declare(queue='monitor')
+            print('Connected to RabbitMQ')
+
+            def callback(ch, method, properties, body):
+
+                decoded_body = body.decode()
+
+                reload = json.loads(decoded_body)
+
+                if (reload['reload']):
+                    if (self.load_monitors(self.monitor_collection) > 0):
+                        print("Monitors reloaded")
+                        ch.basic_ack(delivery_tag=method.delivery_tag)
+
+                return
+
+            channel.basic_qos(prefetch_count=1)
+            channel.basic_consume(callback,
+                                  queue='monitor')
+
+            channel.start_consuming()
+
+        await asyncio.gather(listen_monitor())
 
     async def start_publish(self):
-        #tasks = [self.publish_alerts()]
-        await asyncio.gather(self.publish_alerts())
 
-    async def listen_monitor(self):
-        channel = self.connection.channel()
-        channel.queue_declare(queue='monitor')
-        print('Connected to RabbitMQ')
+        async def publish_alerts():
+            channel = self.connection.channel()
+            channel.queue_declare(queue='alerts', durable=True)
+            while True:
+                for monitor in self._monitors:
+                    channel.basic_publish(exchange='', routing_key='alerts', body=json.dumps(monitor))
+                await asyncio.sleep(2)
 
-        def callback(ch, method, properties, body):
+        await asyncio.gather(publish_alerts())
 
-            decoded_body = body.decode()
-
-            reload = json.loads(decoded_body)
-
-            if(reload['reload']):
-                if(self.load_monitors(self.monitor_collection)>0):
-                    print("Monitors reloaded")
-                    ch.basic_ack(delivery_tag=method.delivery_tag)
-
-            return
-
-        channel.basic_qos(prefetch_count=1)
-        channel.basic_consume(callback,
-                          queue='monitor')
-
-        channel.start_consuming()
-
-    async def publish_alerts(self):
-        channel = self.connection.channel()
-        channel.queue_declare(queue='alerts', durable=True)
-        while True:
-            for monitor in self._monitors:
-                channel.basic_publish(exchange='', routing_key='alerts', body=json.dumps(monitor))
-            await asyncio.sleep(2)
 
     def listen_alerts(self):
-        self.connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host='127.0.0.1', credentials=pika.PlainCredentials('guest', 'guest'),
-                                      virtual_host="/"))
 
-        channel = self.connection.channel()
-        channel.queue_declare(queue='alerts', durable=True)
+        async def listen_alerts_queue():
+            connection = pika.BlockingConnection(
+                pika.ConnectionParameters(host=self._rest_config['amqp'], credentials=pika.PlainCredentials('guest', 'guest'),
+                                          virtual_host="/"))
 
-        def callback(ch, method, properties, body):
+            channel = connection.channel()
+            channel.queue_declare(queue='alerts', durable=True)
 
-            decoded_body = body.decode()
+            def callback(ch, method, properties, body):
 
-            monitor = json.loads(decoded_body)
+                decoded_body = body.decode()
 
-            try:
-                self.monitor_item(monitor)
-            except:
-                print("Oops!")
-            ch.basic_ack(delivery_tag=method.delivery_tag)
+                monitor = json.loads(decoded_body)
 
-            return
+                try:
+                    self.monitor_item(monitor)
+                except:
+                    print("Oops!")
+                ch.basic_ack(delivery_tag=method.delivery_tag)
 
-        channel.basic_qos(prefetch_count=1)
-        channel.basic_consume(callback,
-                          queue='alerts')
+                return
 
-        channel.start_consuming()
+            channel.basic_qos(prefetch_count=1)
+            channel.basic_consume(callback,
+                              queue='alerts')
+
+            channel.start_consuming()
+
+        async def run_listeners():
+            tasks = []
+            for i in range(self._rest_config['workers']):
+                tasks.append(listen_alerts_queue())
+
+            await asyncio.gather(*tasks)
+
+        alerts_loop = asyncio.get_event_loop()
+        #asyncio.set_event_loop(alerts_loop)
+        alerts_loop.run_until_complete(run_listeners())
 
     async def run_monitors(self):
         while True:
@@ -131,24 +144,6 @@ class CheckerService():
 
             await asyncio.gather(*tasks)
             await asyncio.sleep(5)
-
-    # async def monitor_item(self, item):
-    #     response = ''
-    #     status = True
-    #     while True:
-    #         self._start_time = time()
-    #         connector = asyncio.open_connection(host=item['address'], port=item['port'])
-    #         try:
-    #             await asyncio.wait_for(connector,timeout=0.3)
-    #             response = 'Success'
-    #         except:
-    #             status = False
-    #             response = 'Failed'
-    #         finally:
-    #             print("Monitor {}: Test {}:{} - {}".format(item['id'],item['address'],item['port'],response))
-    #             self.update_monitor(monitor=item, status=status)
-    #             connector.close()
-    #         await asyncio.sleep(5)
 
     def monitor_item(self, item):
         response = ''
@@ -176,7 +171,7 @@ def RunChecker():
     check = CheckerService()
     #check.start_monitors()
 
-    for i in range(4):
+    for i in range(check._rest_config['forks']):
         p = Process(target=check.listen_alerts, args=())
         p.start()
 
