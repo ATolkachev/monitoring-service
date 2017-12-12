@@ -5,7 +5,7 @@ setup(
     name="monitor",
     version=monitor.__version__,
     packages=find_packages(),
-    scripts=['monitor/rest.py','monitor/checker.py'],
+    scripts=['monitor/rest.py','monitor/checker.py','monitor/config.py'],
     zip_safe=True,
     license='BSD-3-Clause',
     entry_points = {
@@ -14,5 +14,5 @@ setup(
         	'monitor-checker=monitor.checker:RunChecker'   # сервис который осуществляет проверки
         ],
     },
-    install_requires=["asyncio", "aiohttp", "pymongo"],
+    install_requires=["asyncio", "aiohttp", "pymongo", "pika"],
 )
