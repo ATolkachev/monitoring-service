@@ -1,6 +1,7 @@
 import unittest
 from monitor import checker,rest
 import json
+from time import time
 
 class TestMethods(unittest.TestCase):
 
@@ -11,7 +12,7 @@ class TestMethods(unittest.TestCase):
     def test_rest(self):
         self.rest = rest.RestService()
 
-        check_dict = {"name": "Foo", "address": "127.0.0.1", "port": 80, "alive": False, "since": 1234567890}
+        check_dict = {"name": "Foo", "address": "127.0.0.1", "port": 80, "alive": False, "since": int(time()), "enabled": True}
 
         self.assertDictEqual(self.rest.check_insert_monitor(check_dict),check_dict)
 

@@ -53,7 +53,7 @@ class RestService():
     def get_max_monitor_id(self):
         max_dict = self.monitor_collection.find().sort([("id", -1)]).limit(1)
 
-        self._max_monitor_id = 1
+        self._max_monitor_id = 0
 
         for doc in max_dict:
             self._max_monitor_id = int(doc['id'])
