@@ -4,16 +4,9 @@ import json
 
 class TestMethods(unittest.TestCase):
 
-    def test_1(self):
-        self.assertTrue(True)
-        self.assertEqual(2,2)
-
-    def test_check(self):
-        self.check = checker.CheckerService()
-        self.check.start_monitors()
-
-    def test_id(self):
-        self.assertTrue(self.rest.get_max_monitor_id()>0)
+    # def test_check(self):
+    #     self.check = checker.CheckerService()
+    #     self.check.start_monitors()
 
     def test_rest(self):
         self.rest = rest.RestService()
@@ -27,6 +20,8 @@ class TestMethods(unittest.TestCase):
         self.assertDictEqual(json.dumps({"items": [check_dict]}),self.rest.get_all_checks())
 
         self.assertDictEqual(self.rest.get_check_status(1), check_dict)
+
+        self.assertTrue(self.rest.get_max_monitor_id()>0)
 
 if __name__ == '__main__':
     unittest.main()
