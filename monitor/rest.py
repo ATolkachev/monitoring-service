@@ -11,7 +11,6 @@ class RestService():
     _rest_config = {}
 
     def __init__(self):
-
         self._rest_config = self.load_args()
 
         self.client = MongoClient(self._rest_config['server'])
