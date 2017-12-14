@@ -20,7 +20,7 @@ class TestMethods(unittest.TestCase):
 
         self.rest.insert_monitor(check_dict)
 
-        self.assertDictEqual(json.dumps({"items": [check_dict]}),self.rest.get_all_checks())
+        self.assertDictEqual({"items": [check_dict]},self.rest.get_all_checks())
 
         self.assertDictEqual(self.rest.get_check_status(1), check_dict)
 
