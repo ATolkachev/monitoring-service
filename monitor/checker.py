@@ -3,33 +3,34 @@ import json
 from time import time
 from pymongo import MongoClient
 from multiprocessing import Process
-import config
+import monitor.config
 import pika
 
-class CheckerService():
 
+class CheckerService():
     _monitors = []
 
     def __init__(self):
-        ini = config.ConfigReader()
-        self._rest_config = ini.load_config(config = "../config.ini")
+        ini = monitor.config.ConfigReader()
+        self._rest_config = ini.load_config(config="../config.ini")
 
         self.client = MongoClient(self._rest_config['server'])
         self.db = self.client[self._rest_config['database']]
         self.alert_collection = self.db['alerts']
         self.monitor_collection = self.db['monitor']
 
-        monitor_count=self.load_monitors(self.monitor_collection)
-        if(monitor_count==0):
+        monitor_count = self.load_monitors(self.monitor_collection)
+        if (monitor_count == 0):
             print("There is no monitors in Database")
         else:
             print("{} monitors loaded.".format(monitor_count))
 
         self.connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=self._rest_config['amqp'], credentials=pika.PlainCredentials('guest', 'guest'),
+            pika.ConnectionParameters(host=self._rest_config['amqp'],
+                                      credentials=pika.PlainCredentials('guest', 'guest'),
                                       virtual_host="/"))
 
-    def load_monitors(self,collection):
+    def load_monitors(self, collection):
         monitors = []
         data = self.monitor_collection.find()
 
@@ -42,10 +43,10 @@ class CheckerService():
         return len(self._monitors)
 
     def start_monitors(self):
-        if(len(self._monitors)>0):
+        if (len(self._monitors) > 0):
             loop = asyncio.new_event_loop()
-            #ioloop = asyncio.get_event_loop()
-            #asyncio.wait(wait_tasks)
+            # ioloop = asyncio.get_event_loop()
+            # asyncio.wait(wait_tasks)
             asyncio.set_event_loop(loop)
             loop.run_until_complete(self.run_monitors())
             loop.close()
@@ -92,12 +93,12 @@ class CheckerService():
 
         await asyncio.gather(publish_alerts())
 
-
     def listen_alerts(self):
 
         async def listen_alerts_queue():
             connection = pika.BlockingConnection(
-                pika.ConnectionParameters(host=self._rest_config['amqp'], credentials=pika.PlainCredentials('guest', 'guest'),
+                pika.ConnectionParameters(host=self._rest_config['amqp'],
+                                          credentials=pika.PlainCredentials('guest', 'guest'),
                                           virtual_host="/"))
 
             channel = connection.channel()
@@ -119,7 +120,7 @@ class CheckerService():
 
             channel.basic_qos(prefetch_count=1)
             channel.basic_consume(callback,
-                              queue='alerts')
+                                  queue='alerts')
 
             channel.start_consuming()
 
@@ -131,16 +132,16 @@ class CheckerService():
             await asyncio.gather(*tasks)
 
         alerts_loop = asyncio.get_event_loop()
-        #asyncio.set_event_loop(alerts_loop)
+        # asyncio.set_event_loop(alerts_loop)
         alerts_loop.run_until_complete(run_listeners())
 
     async def run_monitors(self):
         while True:
             tasks = []
             for item in self._monitors:
-                #await asyncio.gather(self.monitor_item(item))
+                # await asyncio.gather(self.monitor_item(item))
                 tasks.append(self.monitor_item(item))
-            #await asyncio.wait(tasks)
+            # await asyncio.wait(tasks)
 
             await asyncio.gather(*tasks)
             await asyncio.sleep(5)
@@ -164,12 +165,14 @@ class CheckerService():
     def update_monitor(self, monitor, status):
         update_time = int(time())
         if monitor['alive'] != status:
-            self.monitor_collection.find_one_and_update({'id': monitor['id']}, {'$set': {"alive": status, 'since': update_time}})
+            self.monitor_collection.find_one_and_update({'id': monitor['id']},
+                                                        {'$set': {"alive": status, 'since': update_time}})
             monitor['alive'] = status
+
 
 def RunChecker():
     check = CheckerService()
-    #check.start_monitors()
+    # check.start_monitors()
 
     for i in range(check._rest_config['forks']):
         p = Process(target=check.listen_alerts, args=())
