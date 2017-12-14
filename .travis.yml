@@ -3,6 +3,7 @@ python:
   - "3.5"
   - "3.6"
 install:
+  - pip install git+https://github.com/ATolkachev/monitoring-service.git/#egg=monitor
   - pip install -r requirements.txt
 script:
   - pytest tests/tests.py

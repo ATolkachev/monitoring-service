@@ -5,7 +5,7 @@ setup(
     name="monitor",
     version=monitor.__version__,
     packages=find_packages(),
-    scripts=['monitor/rest.py', 'monitor/checker.py', 'monitor/config.py'],
+    scripts=['monitor/rest.py', 'monitor/checker.py'],
     zip_safe=True,
     license='BSD-3-Clause',
     entry_points={

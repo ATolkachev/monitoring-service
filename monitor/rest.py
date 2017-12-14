@@ -2,16 +2,17 @@ import json
 from time import time
 from aiohttp import web
 from pymongo import MongoClient
-import monitor.config
 import pika
-
+import argparse
+import sys
 
 class RestService():
     _max_monitor_id = 0
+    _rest_config = {}
 
     def __init__(self):
-        ini = monitor.config.ConfigReader()
-        self._rest_config = ini.load_config(config="../config.ini")
+
+        self._rest_config = self.load_args()
 
         self.client = MongoClient(self._rest_config['server'])
         self.db = self.client[self._rest_config['database']]
@@ -19,6 +20,35 @@ class RestService():
         self.monitor_collection = self.db['monitor']
 
         self.get_max_monitor_id()
+
+    def load_args(self):
+
+        def createParser():
+            parser = argparse.ArgumentParser(
+                prog='rest.py',
+                description='''Monitoring service REST-API''',
+                epilog='''(c) Alexander Tolkachev 2017.''',
+                add_help=True
+            )
+
+            parser.add_argument('--address', type=str, help='Listening Address', default="127.0.0.1")
+            parser.add_argument('--port', type=int, help='Listening Port', default=8080)
+            parser.add_argument('--db', type=str, help='Database connection string', required=False, default="mongodb://127.0.0.1/")
+            parser.add_argument('--database', type=str, help='Monitoring database name', required=False,
+                                default="monitoring")
+            parser.add_argument('--amqp', type=str, help='AMQP server', required=False,
+                                default="127.0.0.1")
+
+            return parser
+
+        parser = createParser()
+        argvs = parser.parse_args(sys.argv[1:])
+
+        return {'server': argvs.db,
+                'database': argvs.database,
+                'address': argvs.address,
+                'port': argvs.port,
+                'amqp': argvs.amqp}
 
     def get_max_monitor_id(self):
         max_dict = self.monitor_collection.find().sort([("id", -1)]).limit(1)

@@ -3,17 +3,65 @@ import json
 from time import time
 from pymongo import MongoClient
 from multiprocessing import Process
-import monitor.config
 import pika
-
+import argparse
+import sys
 
 class CheckerService():
     _monitors = []
+    _rest_config = {}
 
     def __init__(self):
-        ini = monitor.config.ConfigReader()
-        self._rest_config = ini.load_config(config="../config.ini")
+        self._rest_config = self.load_args()
 
+    def load_args(self):
+
+        def createParser():
+            parser = argparse.ArgumentParser(
+                prog='cheker.py',
+                description='''Monitoring service Cheker''',
+                epilog='''(c) Alexander Tolkachev 2017.''',
+                add_help=True
+            )
+
+            parser.add_argument('--address', type=str, help='Listening Address', default="127.0.0.1")
+            parser.add_argument('--port', type=int, help='Listening Port', default=8080)
+            parser.add_argument('--db', type=str, help='Database connection string', required=False,
+                                default="mongodb://127.0.0.1/")
+            parser.add_argument('--database', type=str, help='Monitoring database name', required=False,
+                                default="monitoring")
+            parser.add_argument('--amqp', type=str, help='AMQP server', required=False,
+                                default="127.0.0.1")
+            parser.add_argument('--forks', type=int, help='Amount of Forks', required=False,
+                                default=4)
+            parser.add_argument('--workers', type=int, help='Amount of Worker', required=False,
+                                default=4)
+
+            return parser
+
+        parser = createParser()
+        argvs = parser.parse_args(sys.argv[1:])
+
+        return {'server': argvs.db,
+                'database': argvs.database,
+                'forks': argvs.forks,
+                'workers': argvs.workers,
+                'amqp': argvs.amqp}
+
+
+    def load_monitors(self, collection):
+        monitors = []
+        data = self.monitor_collection.find()
+
+        for obj in data:
+            monitor = {"id": int(obj['id']), "port": int(obj["port"]), "address": obj['address'], "alive": obj['alive']}
+            monitors.append(monitor)
+
+        self._monitors = monitors
+
+        return len(self._monitors)
+
+    def start_monitors(self):
         self.client = MongoClient(self._rest_config['server'])
         self.db = self.client[self._rest_config['database']]
         self.alert_collection = self.db['alerts']
@@ -29,29 +77,6 @@ class CheckerService():
             pika.ConnectionParameters(host=self._rest_config['amqp'],
                                       credentials=pika.PlainCredentials('guest', 'guest'),
                                       virtual_host="/"))
-
-    def load_monitors(self, collection):
-        monitors = []
-        data = self.monitor_collection.find()
-
-        for obj in data:
-            monitor = {"id": int(obj['id']), "port": int(obj["port"]), "address": obj['address'], "alive": obj['alive']}
-            monitors.append(monitor)
-
-        self._monitors = monitors
-
-        return len(self._monitors)
-
-    def start_monitors(self):
-        if (len(self._monitors) > 0):
-            loop = asyncio.new_event_loop()
-            # ioloop = asyncio.get_event_loop()
-            # asyncio.wait(wait_tasks)
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(self.run_monitors())
-            loop.close()
-        else:
-            print("There is no loaded monitors.")
 
     async def start_listen(self):
 
@@ -172,7 +197,7 @@ class CheckerService():
 
 def RunChecker():
     check = CheckerService()
-    # check.start_monitors()
+    check.start_monitors()
 
     for i in range(check._rest_config['forks']):
         p = Process(target=check.listen_alerts, args=())
