@@ -218,16 +218,12 @@ class RestService():
         return web.json_response(text=text)
 
     def prepare_monitor(self, base_monitor):
-        result = dict()
-
-        result["address"] = base_monitor["address"]
-        result["name"] = base_monitor["name"]
-        result["port"] = int(base_monitor["port"])
-        result["id"] = int(base_monitor["id"])
-        result["alive"] = base_monitor["alive"]
-        result["since"] = int(base_monitor["since"])
-
-        return result
+        return {"address": base_monitor["address"],
+                "name": base_monitor["name"],
+                "port": int(base_monitor["port"]),
+                "id": int(base_monitor["id"]),
+                "alive": base_monitor["alive"],
+                "since": int(base_monitor["since"])}
 
     def send_update_monitor(self):
         connection = pika.BlockingConnection(pika.ConnectionParameters(host=self._rest_config['amqp'],
