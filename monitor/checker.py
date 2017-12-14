@@ -5,7 +5,6 @@ from pymongo import MongoClient
 from multiprocessing import Process
 import pika
 import argparse
-import sys
 
 class CheckerService():
     _monitors = []
@@ -40,13 +39,13 @@ class CheckerService():
             return parser
 
         parser = createParser()
-        argvs = parser.parse_args(sys.argv[1:])
+        args, unknown = parser.parse_known_args()
 
-        return {'server': argvs.db,
-                'database': argvs.database,
-                'forks': argvs.forks,
-                'workers': argvs.workers,
-                'amqp': argvs.amqp}
+        return {'server': args.db,
+                'database': args.database,
+                'forks': args.forks,
+                'workers': args.workers,
+                'amqp': args.amqp}
 
 
     def load_monitors(self, collection):

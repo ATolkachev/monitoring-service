@@ -42,13 +42,13 @@ class RestService():
             return parser
 
         parser = createParser()
-        argvs = parser.parse_args(sys.argv[1:])
+        args, unknown = parser.parse_known_args()
 
-        return {'server': argvs.db,
-                'database': argvs.database,
-                'address': argvs.address,
-                'port': argvs.port,
-                'amqp': argvs.amqp}
+        return {'server': args.db,
+                'database': args.database,
+                'address': args.address,
+                'port': args.port,
+                'amqp': args.amqp}
 
     def get_max_monitor_id(self):
         max_dict = self.monitor_collection.find().sort([("id", -1)]).limit(1)
