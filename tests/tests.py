@@ -22,8 +22,8 @@ class TestMethods(unittest.TestCase):
 
         self.rest.insert_monitor(check_dict)
 
-        self.assertDictEqual(json.loads(self.rest.get_check_status(1)), check_dict)
-        self.assertDictEqual({"items": [check_dict]},json.loads(self.rest.get_check_status(-1)))
+        self.assertDictEqual(json.loads(self.rest.get_check_status(1)), check_dict_clean)
+        self.assertDictEqual({"items": [check_dict_clean]},json.loads(self.rest.get_check_status(-1)))
         self.assertDictEqual([check_dict],self.rest.get_all_checks())
 
 
