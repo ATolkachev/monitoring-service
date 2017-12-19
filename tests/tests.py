@@ -27,7 +27,7 @@ class TestMethods(unittest.TestCase):
         self.assertListEqual([check_dict_clean],self.rest.get_all_checks())
 
         self.assertDictEqual({"name": "Foo", "address": "127.0.0.1", "port": 80}, self.rest.check_update_monitor(check_dict))
-        self.assertEqual(1==self.rest.update_monitor(1,check_dict_update))
+        self.assertEqual(1,self.rest.update_monitor(1,check_dict_update))
         self.assertDictEqual(json.loads(self.rest.get_check_status(1)), check_dict_update)
 
         self.assertTrue(self.rest.get_max_monitor_id()==1)
