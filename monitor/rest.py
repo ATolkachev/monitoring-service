@@ -12,6 +12,8 @@ class RestService():
 
     def __init__(self):
         self._rest_config = self.load_args()
+        self._rest_config["server"] = self._rest_config['server']
+        self._rest_config["amqp"] = self._rest_config['amqp']
 
         self.client = MongoClient(self._rest_config['server'])
         self.db = self.client[self._rest_config['database']]
