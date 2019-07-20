@@ -4,7 +4,7 @@ from aiohttp import web
 from pymongo import MongoClient
 import pika
 import argparse
-import sys
+
 
 class RestService():
     _max_monitor_id = 0
@@ -34,7 +34,8 @@ class RestService():
 
             parser.add_argument('--address', type=str, help='Listening Address', default="127.0.0.1")
             parser.add_argument('--port', type=int, help='Listening Port', default=8080)
-            parser.add_argument('--db', type=str, help='Database connection string', required=False, default="mongodb://127.0.0.1/")
+            parser.add_argument('--db', type=str, help='Database connection string', required=False,
+                                default="mongodb://127.0.0.1/")
             parser.add_argument('--database', type=str, help='Monitoring database name', required=False,
                                 default="monitoring")
             parser.add_argument('--amqp', type=str, help='AMQP server', required=False,

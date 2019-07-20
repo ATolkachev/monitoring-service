@@ -6,9 +6,11 @@ from multiprocessing import Process
 import pika
 import argparse
 
+
 class CheckerService():
     _monitors = []
     _rest_config = {}
+    _start_time : int
 
     def __init__(self):
         self._rest_config = self.load_args()
@@ -46,7 +48,6 @@ class CheckerService():
                 'forks': args.forks,
                 'workers': args.workers,
                 'amqp': args.amqp}
-
 
     def load_monitors(self, collection):
         monitors = []
