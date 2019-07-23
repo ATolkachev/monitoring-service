@@ -3,6 +3,7 @@ import json
 from time import time
 from pymongo import MongoClient
 from multiprocessing import Process
+from os import getenv
 import pika
 import argparse
 
@@ -12,10 +13,30 @@ class CheckerService():
     _rest_config = {}
     _start_time : int
 
+    # all arg defaults are now sourced from environment and must be set
+    _env_args = {
+        "MY_CHECKER_ADDRESS":        ('address', str),  # default="127.0.0.1"
+        "MY_CHECKER_PORT":           ('port', int),     # default=8080
+        "MY_CHECKER_DB_CONN_STRING": ('server', str),   # default="mongodb://127.0.0.1/"
+        "MY_CHECKER_DATABASE_NAME":  ('database', str), # default="monitoring"
+        "MY_CHECKER_AMQP_NAME":      ('amqp', str),     # default="127.0.0.1"
+        "MY_CHECKER_FORKS_NUM":      ('forks', int),    # default=4
+        "MY_CHECKER_WORKERS_NUM":    ('workers', int)   # default=4
+    }
+
     def __init__(self):
         self._rest_config = self.load_args()
 
     def load_args(self):
+
+        def _read_env_args():
+            defaults = dict()
+            for env_var, arg in self._env_args.items():
+                try:
+                    defaults[arg[0]] = arg[1](getenv(env_var))
+                except:
+                    raise Exception("checker.py: Environment variable '{}'(of type '{}') is not set to a type-valid default value.".format(env_var, arg[1]))
+            return defaults
 
         def createParser():
             parser = argparse.ArgumentParser(
@@ -25,29 +46,33 @@ class CheckerService():
                 add_help=True
             )
 
-            parser.add_argument('--address', type=str, help='Listening Address', default="127.0.0.1")
-            parser.add_argument('--port', type=int, help='Listening Port', default=8080)
-            parser.add_argument('--db', type=str, help='Database connection string', required=False,
-                                default="mongodb://127.0.0.1/")
-            parser.add_argument('--database', type=str, help='Monitoring database name', required=False,
-                                default="monitoring")
-            parser.add_argument('--amqp', type=str, help='AMQP server', required=False,
-                                default="127.0.0.1")
-            parser.add_argument('--forks', type=int, help='Amount of Forks', required=False,
-                                default=4)
-            parser.add_argument('--workers', type=int, help='Amount of Worker', required=False,
-                                default=4)
+# cmd arguments are optional and override or complement environment defaults
+            parser.add_argument('--address', type=str, help='Listening Address', required=False)
+            parser.add_argument('--port', type=int, help='Listening Port', required=False)
+            parser.add_argument('--db', type=str, help='Database connection string', required=False)
+            parser.add_argument('--database', type=str, help='Monitoring database name', required=False)
+            parser.add_argument('--amqp', type=str, help='AMQP server', required=False)
+            parser.add_argument('--forks', type=int, help='Amount of Forks', required=False)
+            parser.add_argument('--workers', type=int, help='Amount of Workers', required=False)
 
             return parser
+
+# getting defaults from the env - all values guaranteed
+        defaults = self._read_env_args()
 
         parser = createParser()
         args, unknown = parser.parse_known_args()
 
-        return {'server': args.db,
-                'database': args.database,
-                'forks': args.forks,
-                'workers': args.workers,
-                'amqp': args.amqp}
+        arg_dict = {'server': args.db,
+                    'database': args.database,
+                    'forks': args.forks,
+                    'workers': args.workers,
+                    'amqp': args.amqp}
+
+        result = dict(defaults)
+        result.update({k: v for k, v in arg_dict.items() if v is not None})
+
+        return result
 
     def load_monitors(self, collection):
         monitors = []
