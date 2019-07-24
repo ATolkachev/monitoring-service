@@ -1,25 +1,28 @@
 import json
 from time import time
+from typing import Dict
+
 from aiohttp import web
 from pymongo import MongoClient
 from os import getenv
 import pika
 import argparse
 
+from monitor import Env
+
 
 class RestService():
     _max_monitor_id = 0
     _rest_config = {}
 
-# all arg defaults are now sourced from environment and must be set
+    # all arg defaults are now sourced from environment and must be set
     _env_args = {
-                 "MY_REST_ADDRESS":        ('address', str),   # default="127.0.0.1"
-                 "MY_REST_PORT":           ('port', int),      # default=8080
-                 "MY_REST_DB_CONN_STRING": ('server', str),    # default="mongodb://127.0.0.1/"
-                 "MY_REST_DATABASE_NAME":  ('database', str),  # default="monitoring"
-                 "MY_REST_AMQP_NAME":      ('amqp', str)       # default="127.0.0.1"
-                }
-
+        "REST_ADDRESS": Env('address', str, "127.0.0.1"),
+        "REST_PORT": Env('port', int, '8080'),
+        "REST_DB_CONN_STRING": Env('server', str, None),
+        "REST_DATABASE_NAME": Env('database', str, None),
+        "REST_AMQP_NAME": Env('amqp', str, None),
+    }
 
     def __init__(self):
         self._rest_config = self.load_args()
@@ -33,16 +36,20 @@ class RestService():
 
         self.get_max_monitor_id()
 
-    def _read_env_args(self):
-        defaults = dict()
-        for env_var, arg in self._env_args.items():
-            try:
-                defaults[arg[0]] = arg[1](getenv(env_var))
-            except:
-                raise Exception("rest.py: Environment variable '{}'(of type '{}') is not set to a type-valid default value.".format(env_var, arg[1]))
-        return defaults
-
     def load_args(self):
+
+        def _read_env_args() -> Dict:
+            defaults = dict()
+            for env_var, arg in self._env_args.items():
+                try:
+                    env = arg.env_type(getenv(env_var, arg.env_default))
+                    if env is not None:
+                        defaults[arg.env_name] = env
+                except:
+                    raise Exception(
+                        "rest.py: Environment variable '{}'(of type '{}') is not set to a type-valid default value.".format(
+                            env_var, arg[1]))
+            return defaults
 
         def createParser():
             parser = argparse.ArgumentParser(
@@ -51,7 +58,7 @@ class RestService():
                 epilog='''(c) Alexander Tolkachev 2017.''',
                 add_help=True
             )
-# cmd arguments are optional and override or complement environment defaults
+            # cmd arguments are optional and override or complement environment defaults
             parser.add_argument('--address', type=str, help='Listening Address', required=False)
             parser.add_argument('--port', type=int, help='Listening Port', required=False)
             parser.add_argument('--db', type=str, help='Database connection string', required=False)
@@ -60,8 +67,8 @@ class RestService():
 
             return parser
 
-# getting defaults from the env - all values guaranteed
-        defaults = self._read_env_args()
+        # getting defaults from the env - all values guaranteed
+        config = _read_env_args()
 
         parser = createParser()
         args, unknown = parser.parse_known_args()
@@ -72,10 +79,9 @@ class RestService():
                     'port': args.port,
                     'amqp': args.amqp}
 
-        result = dict(defaults)
-        result.update({k: v for k, v in arg_dict.items() if v is not None})
+        config.update({k: v for k, v in arg_dict.items() if v is not None})
 
-        return result
+        return config
 
     def get_max_monitor_id(self):
         max_dict = self.monitor_collection.find().sort([("id", -1)]).limit(1)
