@@ -8,7 +8,8 @@ build: build-template build-rest build-checker
 
 build-template:
 	docker build docker_image/docker_template \
-      -t $(TEMPLATE_NAME)
+      -t $(TEMPLATE_NAME) \
+      --build-arg TIME=$(shell date +%s)
 
 
 build-checker:

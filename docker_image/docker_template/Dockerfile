@@ -6,6 +6,8 @@ LABEL Name="monitor-server" Version="$VERSION"\
       Description="Alexander's Monitoring Server Template" \
       Maintainer="Alexander Tolkachev <alexander.e.tolkachev@gmail.com>"
 
+ARG TIME
+
 RUN apk add git
 RUN pip3.6 install -U setuptools
 RUN pip3.6 install -e git+https://github.com/ATolkachev/monitoring-service#egg=monitoring
