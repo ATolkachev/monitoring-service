@@ -8,7 +8,7 @@ from os import getenv
 import pika
 import argparse
 
-from monitor import Env
+from config import Env
 
 
 class RestService():

@@ -9,7 +9,7 @@ from os import getenv
 import pika
 import argparse
 
-from monitor import Env
+from monitor.config import Env
 
 
 class CheckerService():
