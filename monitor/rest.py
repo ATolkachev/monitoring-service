@@ -2,6 +2,7 @@ import json
 from time import time
 from aiohttp import web
 from pymongo import MongoClient
+from os import getenv
 import pika
 import argparse
 
@@ -9,6 +10,16 @@ import argparse
 class RestService():
     _max_monitor_id = 0
     _rest_config = {}
+
+# all arg defaults are now sourced from environment and must be set
+    _env_args = {
+                 "MY_REST_ADDRESS":        ('address', str),   # default="127.0.0.1"
+                 "MY_REST_PORT":           ('port', int),      # default=8080
+                 "MY_REST_DB_CONN_STRING": ('server', str),    # default="mongodb://127.0.0.1/"
+                 "MY_REST_DATABASE_NAME":  ('database', str),  # default="monitoring"
+                 "MY_REST_AMQP_NAME":      ('amqp', str)       # default="127.0.0.1"
+                }
+
 
     def __init__(self):
         self._rest_config = self.load_args()
@@ -22,6 +33,15 @@ class RestService():
 
         self.get_max_monitor_id()
 
+    def _read_env_args(self):
+        defaults = dict()
+        for env_var, arg in self._env_args.items():
+            try:
+                defaults[arg[0]] = arg[1](getenv(env_var))
+            except:
+                raise Exception("rest.py: Environment variable '{}'(of type '{}') is not set to a type-valid default value.".format(env_var, arg[1]))
+        return defaults
+
     def load_args(self):
 
         def createParser():
@@ -31,26 +51,31 @@ class RestService():
                 epilog='''(c) Alexander Tolkachev 2017.''',
                 add_help=True
             )
-
-            parser.add_argument('--address', type=str, help='Listening Address', default="127.0.0.1")
-            parser.add_argument('--port', type=int, help='Listening Port', default=8080)
-            parser.add_argument('--db', type=str, help='Database connection string', required=False,
-                                default="mongodb://127.0.0.1/")
-            parser.add_argument('--database', type=str, help='Monitoring database name', required=False,
-                                default="monitoring")
-            parser.add_argument('--amqp', type=str, help='AMQP server', required=False,
-                                default="127.0.0.1")
+# cmd arguments are optional and override or complement environment defaults
+            parser.add_argument('--address', type=str, help='Listening Address', required=False)
+            parser.add_argument('--port', type=int, help='Listening Port', required=False)
+            parser.add_argument('--db', type=str, help='Database connection string', required=False)
+            parser.add_argument('--database', type=str, help='Monitoring database name', required=False)
+            parser.add_argument('--amqp', type=str, help='AMQP server', required=False)
 
             return parser
+
+# getting defaults from the env - all values guaranteed
+        defaults = self._read_env_args()
 
         parser = createParser()
         args, unknown = parser.parse_known_args()
 
-        return {'server': args.db,
-                'database': args.database,
-                'address': args.address,
-                'port': args.port,
-                'amqp': args.amqp}
+        arg_dict = {'server': args.db,
+                    'database': args.database,
+                    'address': args.address,
+                    'port': args.port,
+                    'amqp': args.amqp}
+
+        result = dict(defaults)
+        result.update({k: v for k, v in arg_dict.items() if v is not None})
+
+        return result
 
     def get_max_monitor_id(self):
         max_dict = self.monitor_collection.find().sort([("id", -1)]).limit(1)
