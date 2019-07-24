@@ -1,0 +1,61 @@
+version: '2'
+services:
+    mongodb:
+        image: mongo:latest
+        container_name: "mongodb"
+        expose:
+            - 27017
+        ports:
+            - 27017:27017
+        environment:
+          - MONGO_DATA_DIR=/data/db
+          - MONGO_LOG_DIR=/dev/null
+        volumes:
+          - ./testing/mongo/db:/data/db
+        command: mongod --smallfiles
+    rabbitmq:
+        image: rabbitmq:3.7
+        expose:
+            - 5672
+        environment:
+            RABBITMQ_DEFAULT_USER: guest
+            RABBITMQ_DEFAULT_PASS: guest
+            RABBITMQ_DEFAULT_VHOST: "/"
+        volumes:
+          - ./testing/rabbitmq:/var/lib/rabbitmq
+
+    monitor-rest:
+        image: monitor-rest:latest
+        ports:
+            - 8080:8080
+        links:
+            - mongodb
+            - rabbitmq
+        working_dir: /mnt
+        environment:
+            REST_ADDRESS: 0.0.0.0
+            REST_PORT: 8080
+            REST_DB_CONN_STRING: mongodb://mongodb/
+            REST_DATABASE_NAME: monitoring
+            REST_AMQP_NAME: rabbitmq
+        volumes:
+            - .:/mnt
+        command: monitor-rest
+    monitor-checker:
+        image: monitor-checker:latest
+        entrypoint: sh /mnt/testing/wait-for-services.sh
+        ports:
+            - 8081:8081
+        links:
+            - mongodb
+            - rabbitmq
+        working_dir: /mnt
+        environment:
+            CHECKER_ADDRESS: 0.0.0.0
+            CHECKER_PORT: 8081
+            CHECKER_DB_CONN_STRING: mongodb://mongodb/
+            CHECKER_DATABASE_NAME: monitoring
+            CHECKER_AMQP_NAME: rabbitmq
+        volumes:
+            - .:/mnt
+        command: monitor-checker
