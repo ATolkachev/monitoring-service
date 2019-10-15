@@ -15,7 +15,7 @@ setup(
     entry_points={
         'console_scripts': [
             'monitor-rest=monitor.rest:RunRest',
-            'monitor-checker=monitor.checker:RunChecker'
+            'monitor-checker=monitor.checker:run_checker'
         ],
     },
     install_requires=parse_requirements_file('requirements.txt'),
